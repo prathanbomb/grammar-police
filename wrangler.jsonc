@@ -1,7 +1,14 @@
 {
   "name": "the-royal-grammar-police",
   "compatibility_date": "2025-12-12",
+  "main": "./worker/index.ts",
   "assets": {
     "directory": "./dist"
-  }
+  },
+  "kv_namespaces": [
+    {
+      "binding": "RATE_LIMIT",
+      "id": "f1b2cbd60a86430591e229fc25724138"
+    }
+  ]
 }
