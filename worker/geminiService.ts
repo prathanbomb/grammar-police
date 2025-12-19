@@ -87,7 +87,7 @@ export const correctGrammar = async (
   `;
 
   const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
+    model: "gemini-3-flash-preview",
     contents: `Please correct and rewrite the following text.\n\nText: "${text}"`,
     config: {
       systemInstruction: systemInstruction,
