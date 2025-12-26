@@ -51,13 +51,13 @@ export function getCorrectionBadgeClasses(type: CorrectionType): string {
 }
 
 /**
- * Create a regex pattern for matching correction text with word boundaries
+ * Create a regex pattern for matching correction text
  */
 function createMatchPattern(text: string): RegExp {
   // Escape regex special characters
   const escaped = text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  // Use word boundaries for better matching, but handle punctuation at boundaries
-  return new RegExp(`(?<![\\w])${escaped}(?![\\w])`, 'gi');
+  // Simple case-insensitive match - more permissive to catch all corrections
+  return new RegExp(escaped, 'gi');
 }
 
 /**
