@@ -152,7 +152,7 @@ const App: React.FC = () => {
              )}
 
              {result ? (
-               <ResultView result={result} dialect={selectedDialect} />
+               <ResultView result={result} dialect={selectedDialect} originalText={inputText} />
              ) : (
                <div className="h-full min-h-[300px] lg:min-h-[600px] flex flex-col items-center justify-center text-center p-8 bg-white/50 border-2 border-dashed border-gray-200 rounded-xl">
                  <div className="bg-royal-50 p-6 rounded-full mb-4">

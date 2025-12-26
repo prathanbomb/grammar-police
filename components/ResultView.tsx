@@ -1,18 +1,21 @@
 import React, { useState, useCallback } from 'react';
 import { GrammarResponse, Dialect, GrammarCorrection } from '../types';
-import { Check, Copy, AlertCircle, Sparkles, BookOpen } from 'lucide-react';
+import { Check, Copy, AlertCircle, Sparkles, BookOpen, GitCompare, FileText } from 'lucide-react';
 import { HighlightedText } from './HighlightedText';
 import { CorrectionTooltip } from './CorrectionTooltip';
 import { CorrectionLegend } from './CorrectionLegend';
+import { DiffView } from './DiffView';
 import { extractPlainText, getCorrectionBadgeClasses } from '../utils/highlightUtils';
 
 interface ResultViewProps {
   result: GrammarResponse;
   dialect: Dialect;
+  originalText: string;
 }
 
-export const ResultView: React.FC<ResultViewProps> = ({ result, dialect }) => {
+export const ResultView: React.FC<ResultViewProps> = ({ result, dialect, originalText }) => {
   const [copied, setCopied] = useState(false);
+  const [viewMode, setViewMode] = useState<'improved' | 'diff'>('improved');
   const [tooltipData, setTooltipData] = useState<{
     correction: GrammarCorrection | null;
     rect: DOMRect | null;
@@ -77,8 +80,33 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, dialect }) => {
       <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden relative group">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-royal-400 via-royal-600 to-guardsman-600"></div>
         <div className="p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-serif font-bold text-gray-900">Improved Version</h2>
+          <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
+            {/* View Mode Toggle */}
+            <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg">
+              <button
+                onClick={() => setViewMode('improved')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+                  viewMode === 'improved'
+                    ? 'bg-white text-royal-700 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <FileText className="w-4 h-4" />
+                Improved
+              </button>
+              <button
+                onClick={() => setViewMode('diff')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+                  viewMode === 'diff'
+                    ? 'bg-white text-royal-700 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <GitCompare className="w-4 h-4" />
+                Compare
+              </button>
+            </div>
+
             <button
               onClick={handleCopy}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-royal-700 bg-gray-50 hover:bg-royal-50 rounded-md transition-colors"
@@ -88,25 +116,35 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, dialect }) => {
             </button>
           </div>
 
-          {/* Legend */}
-          {result.corrections.length > 0 && <CorrectionLegend />}
+          {/* Legend - only show for improved view */}
+          {viewMode === 'improved' && result.corrections.length > 0 && <CorrectionLegend />}
 
-          {/* Highlighted Text Container */}
-          <div className="h-[400px] overflow-y-auto p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <HighlightedText
-              html={result.rewrittenText}
-              corrections={result.corrections}
-              onCorrectionHover={handleCorrectionHover}
-              onCorrectionClick={handleCorrectionClick}
+          {/* View Content */}
+          {viewMode === 'improved' ? (
+            <>
+              {/* Highlighted Text Container */}
+              <div className="h-[400px] overflow-y-auto p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <HighlightedText
+                  html={result.rewrittenText}
+                  corrections={result.corrections}
+                  onCorrectionHover={handleCorrectionHover}
+                  onCorrectionClick={handleCorrectionClick}
+                />
+              </div>
+
+              {/* Tooltip */}
+              <CorrectionTooltip
+                correction={tooltipData.correction}
+                targetRect={tooltipData.rect}
+                visible={!!tooltipData.correction}
+              />
+            </>
+          ) : (
+            <DiffView
+              originalHtml={originalText}
+              correctedHtml={result.rewrittenText}
             />
-          </div>
-
-          {/* Tooltip */}
-          <CorrectionTooltip
-            correction={tooltipData.correction}
-            targetRect={tooltipData.rect}
-            visible={!!tooltipData.correction}
-          />
+          )}
         </div>
       </div>
 
