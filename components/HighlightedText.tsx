@@ -37,18 +37,10 @@ export const HighlightedText: React.FC<HighlightedTextProps> = ({
     }
   }, [corrections, onCorrectionHover]);
 
-  const handleMouseOut = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (!onCorrectionHover) return;
-
-    const target = e.target as HTMLElement;
-    const relatedTarget = e.relatedTarget as HTMLElement | null;
-
-    // Only trigger if we're leaving a correction span
-    if (target.hasAttribute('data-correction-index')) {
-      // Check if we're moving to another part of the same correction or outside
-      if (!relatedTarget || !relatedTarget.hasAttribute('data-correction-index')) {
-        onCorrectionHover(null, null);
-      }
+  // Hide tooltip when mouse leaves the entire container
+  const handleMouseLeave = useCallback(() => {
+    if (onCorrectionHover) {
+      onCorrectionHover(null, null);
     }
   }, [onCorrectionHover]);
 
@@ -68,7 +60,7 @@ export const HighlightedText: React.FC<HighlightedTextProps> = ({
       className={`prose prose-slate max-w-none text-lg leading-relaxed font-serif ${className}`}
       dangerouslySetInnerHTML={{ __html: highlightedHtml }}
       onMouseOver={handleMouseOver}
-      onMouseOut={handleMouseOut}
+      onMouseLeave={handleMouseLeave}
       onClick={handleClick}
     />
   );
