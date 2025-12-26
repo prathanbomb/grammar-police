@@ -14,6 +14,15 @@
               serif: ['"Playfair Display"', 'serif'],
               sans: ['"Inter"', 'sans-serif'],
             },
+            animation: {
+              fadeIn: 'fadeIn 0.3s ease-in-out',
+            },
+            keyframes: {
+              fadeIn: {
+                '0%': { opacity: '0', transform: 'translateY(5px)' },
+                '100%': { opacity: '1', transform: 'translateY(0)' },
+              },
+            },
             colors: {
               royal: {
                 50: '#f0f4ff',
@@ -28,8 +37,21 @@
                 900: '#172554',
               },
               guardsman: {
+                100: '#fee2e2',
                 500: '#dc2626', // Red
                 600: '#b91c1c',
+                700: '#991b1b',
+              },
+              amber: {
+                100: '#fef3c7',
+                500: '#f59e0b',
+                700: '#b45309',
+              },
+              emerald: {
+                100: '#d1fae5',
+                500: '#10b981',
+                600: '#059669',
+                700: '#047857',
               }
             }
           }
@@ -46,6 +68,18 @@
         color: #9ca3af;
         pointer-events: none;
         font-family: "Playfair Display", serif;
+      }
+      /* Highlight flash animation for scrolled-to correction cards */
+      @keyframes highlightFlash {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(30, 64, 175, 0); }
+        50% { box-shadow: 0 0 0 4px rgba(30, 64, 175, 0.3); }
+      }
+      .highlight-flash {
+        animation: highlightFlash 1s ease-in-out 2;
+      }
+      /* Correction highlight hover state */
+      .correction-highlight:hover {
+        filter: brightness(0.95);
       }
     </style>
 </head>

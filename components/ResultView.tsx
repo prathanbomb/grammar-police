@@ -1,7 +1,10 @@
-import React from 'react';
-import { GrammarResponse, Dialect } from '../types';
+import React, { useState, useCallback } from 'react';
+import { GrammarResponse, Dialect, GrammarCorrection } from '../types';
 import { Check, Copy, AlertCircle, Sparkles, BookOpen } from 'lucide-react';
-import { RichTextEditor } from './RichTextEditor';
+import { HighlightedText } from './HighlightedText';
+import { CorrectionTooltip } from './CorrectionTooltip';
+import { CorrectionLegend } from './CorrectionLegend';
+import { extractPlainText, getCorrectionBadgeClasses } from '../utils/highlightUtils';
 
 interface ResultViewProps {
   result: GrammarResponse;
@@ -9,21 +12,48 @@ interface ResultViewProps {
 }
 
 export const ResultView: React.FC<ResultViewProps> = ({ result, dialect }) => {
-  const [copied, setCopied] = React.useState(false);
+  const [copied, setCopied] = useState(false);
+  const [tooltipData, setTooltipData] = useState<{
+    correction: GrammarCorrection | null;
+    rect: DOMRect | null;
+  }>({ correction: null, rect: null });
 
   const handleCopy = () => {
-    // Create a temporary element to extract text while preserving line breaks somewhat gracefully
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = result.rewrittenText;
-    const text = tempDiv.innerText;
-    
+    const text = extractPlainText(result.rewrittenText);
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const reportTitle = dialect === Dialect.BRITISH 
-    ? "Chief Inspector's Report" 
+  const handleCorrectionHover = useCallback((correction: GrammarCorrection | null, rect: DOMRect | null) => {
+    setTooltipData({ correction, rect });
+  }, []);
+
+  const handleCorrectionClick = useCallback((correctionIndex: number) => {
+    // Find the corresponding correction card and scroll to it
+    const cardElement = document.getElementById(`correction-card-${correctionIndex}`);
+    if (cardElement) {
+      // Remove any existing highlight flash
+      document.querySelectorAll('.highlight-flash').forEach(el => {
+        el.classList.remove('highlight-flash');
+      });
+
+      // Scroll to the card
+      cardElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+      // Add highlight flash animation
+      setTimeout(() => {
+        cardElement.classList.add('highlight-flash');
+        // Remove the class after animation completes
+        setTimeout(() => {
+          cardElement.classList.remove('highlight-flash');
+        }, 2000);
+      }, 300);
+    }
+  }, []);
+
+  const reportTitle = dialect === Dialect.BRITISH
+    ? "Chief Inspector's Report"
     : "Sheriff's Report";
 
   return (
@@ -57,13 +87,25 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, dialect }) => {
               {copied ? 'Copied' : 'Copy'}
             </button>
           </div>
-          
-          <RichTextEditor 
-            value={result.rewrittenText}
-            onChange={() => {}} 
-            readOnly={true}
-            className="h-[400px]"
-            placeholder="Result will appear here..."
+
+          {/* Legend */}
+          {result.corrections.length > 0 && <CorrectionLegend />}
+
+          {/* Highlighted Text Container */}
+          <div className="h-[400px] overflow-y-auto p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <HighlightedText
+              html={result.rewrittenText}
+              corrections={result.corrections}
+              onCorrectionHover={handleCorrectionHover}
+              onCorrectionClick={handleCorrectionClick}
+            />
+          </div>
+
+          {/* Tooltip */}
+          <CorrectionTooltip
+            correction={tooltipData.correction}
+            targetRect={tooltipData.rect}
+            visible={!!tooltipData.correction}
           />
         </div>
       </div>
@@ -77,12 +119,15 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, dialect }) => {
           </h3>
           <div className="space-y-4">
             {result.corrections.map((item, index) => (
-              <div key={index} className="flex flex-col md:flex-row gap-4 p-5 rounded-lg bg-gray-50 border border-gray-100 hover:border-royal-200 transition-colors">
-                
+              <div
+                key={index}
+                id={`correction-card-${index}`}
+                className="flex flex-col md:flex-row gap-4 p-5 rounded-lg bg-gray-50 border border-gray-100 hover:border-royal-200 transition-all"
+              >
                 {/* Left Side: What changed */}
                 <div className="md:w-1/3 flex-shrink-0">
                    <div className="flex items-baseline gap-2 mb-2">
-                      <span className="text-xs font-bold uppercase tracking-wider text-gray-500 bg-white px-2 py-0.5 rounded border border-gray-200">
+                      <span className={`text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded ${getCorrectionBadgeClasses(item.type)}`}>
                         {item.type}
                       </span>
                    </div>
