@@ -2,11 +2,14 @@ import { GrammarCorrection } from '../types';
 
 export type CorrectionType = GrammarCorrection['type'];
 
+interface IndexedCorrection extends GrammarCorrection {
+  originalIndex: number;
+}
+
 interface CorrectionMatch {
   start: number;
   end: number;
-  correction: GrammarCorrection;
-  index: number;
+  correction: IndexedCorrection;
 }
 
 /**
@@ -48,15 +51,6 @@ export function getCorrectionBadgeClasses(type: CorrectionType): string {
 }
 
 /**
- * Escape HTML special characters
- */
-function escapeHtml(text: string): string {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
-
-/**
  * Create a regex pattern for matching correction text with word boundaries
  */
 function createMatchPattern(text: string): RegExp {
@@ -83,11 +77,11 @@ function walkTextNodes(node: Node, callback: (textNode: Text) => void): void {
 /**
  * Find all matches of corrections in a text string
  */
-function findMatches(text: string, corrections: GrammarCorrection[]): CorrectionMatch[] {
+function findMatches(text: string, corrections: IndexedCorrection[]): CorrectionMatch[] {
   const matches: CorrectionMatch[] = [];
   const usedPositions = new Set<string>();
 
-  corrections.forEach((correction, index) => {
+  corrections.forEach((correction) => {
     const pattern = createMatchPattern(correction.correction);
     let match: RegExpExecArray | null;
 
@@ -102,8 +96,7 @@ function findMatches(text: string, corrections: GrammarCorrection[]): Correction
         matches.push({
           start: match.index,
           end: match.index + match[0].length,
-          correction,
-          index
+          correction
         });
         usedPositions.add(posKey);
         // Only match first occurrence of each correction
@@ -121,14 +114,14 @@ function findMatches(text: string, corrections: GrammarCorrection[]): Correction
  */
 function processTextNode(
   textNode: Text,
-  corrections: GrammarCorrection[],
+  corrections: IndexedCorrection[],
   usedCorrections: Set<number>
 ): void {
   const text = textNode.textContent || '';
   if (!text.trim()) return;
 
   // Find corrections that haven't been used yet
-  const availableCorrections = corrections.filter((_, i) => !usedCorrections.has(i));
+  const availableCorrections = corrections.filter(c => !usedCorrections.has(c.originalIndex));
   if (availableCorrections.length === 0) return;
 
   const matches = findMatches(text, availableCorrections);
@@ -146,21 +139,15 @@ function processTextNode(
     // Create highlighted span
     const span = document.createElement('span');
     span.className = getCorrectionTypeClasses(match.correction.type);
-    span.setAttribute('data-correction-index', String(match.index));
+    span.setAttribute('data-correction-index', String(match.correction.originalIndex));
     span.setAttribute('data-correction-type', match.correction.type);
     span.setAttribute('data-original', match.correction.original);
     span.setAttribute('data-explanation', match.correction.explanation);
     span.textContent = text.slice(match.start, match.end);
     fragment.appendChild(span);
 
-    // Mark this correction as used
-    const originalIndex = corrections.findIndex(c =>
-      c.original === match.correction.original &&
-      c.correction === match.correction.correction
-    );
-    if (originalIndex !== -1) {
-      usedCorrections.add(originalIndex);
-    }
+    // Mark this correction as used by its original index
+    usedCorrections.add(match.correction.originalIndex);
 
     lastIndex = match.end;
   }
@@ -185,14 +172,16 @@ export function highlightCorrectionsInHtml(
   if (!html) return '';
   if (!corrections || corrections.length === 0) return html;
 
-  // Filter out invalid corrections
-  const validCorrections = corrections.filter(c =>
-    c.correction &&
-    c.correction.trim().length > 0 &&
-    c.type
-  );
+  // Map corrections with their original index, then filter out invalid ones
+  const indexedCorrections: IndexedCorrection[] = corrections
+    .map((c, i) => ({ ...c, originalIndex: i }))
+    .filter(c =>
+      c.correction &&
+      c.correction.trim().length > 0 &&
+      c.type
+    );
 
-  if (validCorrections.length === 0) return html;
+  if (indexedCorrections.length === 0) return html;
 
   // Parse HTML into DOM
   const parser = new DOMParser();
@@ -210,7 +199,7 @@ export function highlightCorrectionsInHtml(
 
   // Process each text node
   for (const textNode of textNodes) {
-    processTextNode(textNode, validCorrections, usedCorrections);
+    processTextNode(textNode, indexedCorrections, usedCorrections);
   }
 
   return container.innerHTML;
